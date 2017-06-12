@@ -1,9 +1,11 @@
+import os
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.datasets.base import Dataset
 
 
-NUM_EPOCHS = 2000
+NUM_EPOCHS = 100
 BATCH_SIZE = 25
 MIN_AFTER_DEQUEUE = 512
 
@@ -55,3 +57,22 @@ def create_input_fn(dataset: Dataset, shuffle=False, num_epochs=NUM_EPOCHS, batc
         return generic_input_fn(dataset.data, dataset.target, shuffle, num_epochs, batch_size)
 
     return input_fn
+
+
+def get_model_dir(name: str = None):
+    import tempfile
+
+    models_dir = os.environ.get('TENSORFLOW_MODELS_DIR')
+    if models_dir is None:
+        tmp_dir = tempfile.gettempdir()
+        default_models_subdir = 'tf_models'
+        models_dir = os.path.join(tmp_dir, default_models_subdir)
+
+    if name is not None:
+        model_dir = os.path.join(models_dir, name)
+    else:
+        unnamed_models_dir = os.path.join(models_dir, 'unnamed')
+        os.makedirs(unnamed_models_dir, exist_ok=True)
+        model_dir = tempfile.mkdtemp(dir=unnamed_models_dir, prefix='')
+
+    return model_dir

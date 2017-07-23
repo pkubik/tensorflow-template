@@ -1,21 +1,36 @@
-import argparse
+from functools import partial
 
 import tensorflow as tf
-from iris.io_utils import create_input_fn, prepare_data, get_model_dir
-from iris.model import model_fn
+
+import iris.io_utils as io
+from iris.cli import CLI
+from iris.model import model_fn, DEFAULT_PARAMS
 
 
-def main(args):
-    model_dir = get_model_dir(args.name)
-    trainset, testset = prepare_data()
+def run(action: str, model_dir: str, overrides: dict):
+    print("Using a model from '{}' ({})".format(model_dir, action))
 
-    params = {
-        "learning_rate": 0.01,
-        "num_hidden": 16
-    }
+    params = {}
+    params.update(DEFAULT_PARAMS)
+    params.update(io.load_params(model_dir))
+    params.update(overrides)
+
+    num_epochs = params['num_epochs']
+    batch_size = params['batch_size']
+
+    trainset, testset = io.prepare_data()
+    create_input_fn = partial(io.create_input_fn, batch_size=batch_size)
+
+    # Create estimator
     e = tf.estimator.Estimator(model_fn, model_dir=model_dir, params=params)
+    # Create/update the parameters file
+    io.store_params(params, model_dir)
 
-    e.train(input_fn=create_input_fn(trainset, shuffle=True))
+    # Train model
+    if action == 'train':
+        e.train(input_fn=create_input_fn(trainset, num_epochs=num_epochs, shuffle=True))
+
+    # Evaluate model
     metrics = e.evaluate(input_fn=create_input_fn(trainset, num_epochs=1))
     print('Train set accuracy: {}'.format(metrics['accuracy']))
     metrics = e.evaluate(input_fn=create_input_fn(testset, num_epochs=1))
@@ -31,7 +46,10 @@ def main(args):
     print(''.join(' ' if p == t else '!' for p, t in zip(predicted_targets, testset.target)))
 
 
+def main():
+    cli = CLI()
+    run(cli.action, cli.model_dir, cli.overrides)
+
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train and evaluate TensorFlow model.')
-    parser.add_argument('--name', '-n', metavar='NAME', default=None, type=str, help='model name')
-    main(parser.parse_args())
+    main()

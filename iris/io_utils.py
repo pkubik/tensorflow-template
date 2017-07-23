@@ -2,12 +2,12 @@ import os
 
 import numpy as np
 import tensorflow as tf
+import json
 from tensorflow.contrib.learn.python.learn.datasets.base import Dataset
 
 
-NUM_EPOCHS = 100
-BATCH_SIZE = 25
 MIN_AFTER_DEQUEUE = 512
+PARAMS_FILENAME = 'params.json'
 
 
 def generic_input_fn(attributes: np.ndarray, target: np.ndarray, shuffle: bool, num_epochs: int, batch_size: int):
@@ -51,7 +51,7 @@ def prepare_data() -> (Dataset, Dataset):
     return Dataset(train_data, train_target), Dataset(test_data, test_target)
 
 
-def create_input_fn(dataset: Dataset, shuffle=False, num_epochs=NUM_EPOCHS, batch_size=BATCH_SIZE):
+def create_input_fn(dataset: Dataset, num_epochs: int, batch_size: int, shuffle=False):
 
     def input_fn():
         return generic_input_fn(dataset.data, dataset.target, shuffle, num_epochs, batch_size)
@@ -76,3 +76,17 @@ def get_model_dir(name: str = None):
         model_dir = tempfile.mkdtemp(dir=unnamed_models_dir, prefix='')
 
     return model_dir
+
+
+def store_params(params: dict, model_dir: str):
+    with open(os.path.join(model_dir, PARAMS_FILENAME), 'w') as params_file:
+        json.dump(params, params_file)
+
+
+def load_params(model_dir: str) -> dict:
+    os.makedirs(model_dir, exist_ok=True)
+    try:
+        with open(os.path.join(model_dir, PARAMS_FILENAME), 'r') as params_file:
+            return json.load(params_file)
+    except FileNotFoundError:
+        return {}

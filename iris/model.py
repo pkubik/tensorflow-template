@@ -1,31 +1,36 @@
 import tensorflow as tf
 
 
-NUM_CLASSES = 3
+DEFAULT_PARAMS = {
+    'num_epochs': 100,
+    'batch_size': 25,
+    'num_classes': 3,
+    "learning_rate": 0.01,
+    "num_hidden": 16
+}
 
 
 def model_fn(mode, features, labels, params):
     # Feature passed from the input_fn
     attributes = features['attributes']
     # Network hyperparameter
+    num_classes = params['num_classes']
     num_hidden = params['num_hidden']
-
-    # True values for training and testing (not passed during prediction)
-    if mode != tf.estimator.ModeKeys.PREDICT:
-        # Targets batch passed from the input_fn
-        targets = labels['targets']
-        # Transform the targets vector into a batch of one-hot vectors
-        hot_targets = tf.one_hot(targets, NUM_CLASSES)
 
     # Actual neural network with one hidden layer
     hidden = tf.layers.dense(attributes, num_hidden, activation=tf.tanh, name='hidden')
-    output = tf.layers.dense(hidden, NUM_CLASSES, name='logits')
+    output = tf.layers.dense(hidden, num_classes, name='logits')
 
     # Assign a default value to the train_op and loss to be passed for modes other than TRAIN
     loss = None
     train_op = None
     # Following part of the network will be constructed only for training
     if mode != tf.estimator.ModeKeys.PREDICT:
+        # Targets batch passed from the input_fn
+        targets = labels['targets']
+        # Transform the targets vector into a batch of one-hot vectors
+        hot_targets = tf.one_hot(targets, num_classes)
+
         # We do not assign our loss to a variable because all losses are added to losses collection internally
         tf.losses.softmax_cross_entropy(hot_targets, output)
         loss = tf.losses.get_total_loss()

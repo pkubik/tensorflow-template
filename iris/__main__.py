@@ -47,7 +47,9 @@ def run(action: str, model_dir: str, overrides: dict):
 
 
 def main():
-    cli = CLI()
+    allowed_actions = ['train', 'test']
+    allowed_params = sorted(DEFAULT_PARAMS.keys())
+    cli = CLI(allowed_actions, allowed_params)
     run(cli.action, cli.model_dir, cli.overrides)
 
 
